@@ -133,6 +133,8 @@ class Renamer:
 
         result = response.json()
         content = result.get("response", "")
+        logger.info(f"Ollama raw response length: {len(content)} chars")
+        logger.debug(f"Ollama raw response: {content[:500]}")
 
         # Parse the JSON response
         try:
@@ -183,7 +185,11 @@ class Renamer:
                 filenames = [f["current_name"] for f in files]
 
                 try:
+                    logger.info(f"Calling Ollama with {len(filenames)} files: {filenames}")
                     suggestions = await self._call_ollama(filenames)
+                    logger.info(f"Ollama returned {len(suggestions)} suggestions")
+                    for s in suggestions:
+                        logger.info(f"  Suggestion: {s.get('original', '?')} -> {s.get('suggested', '?')}")
                 except Exception as e:
                     logger.error(f"Ollama call failed: {e}")
                     stats["errors"] += len(files)
@@ -225,6 +231,7 @@ class Renamer:
                     suggested = entry.get("suggested", "")
 
                     if not suggested or suggested == current_name:
+                        logger.info(f"Skipping {current_name} (no rename suggested)")
                         await self.db.update_file_status(file_id, "renamed")
                         stats["skipped"] += 1
                         continue
