@@ -1,4 +1,4 @@
-version: '3.8'
+version: '2.4'
 
 services:
   libtag:
@@ -8,9 +8,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # Mount your Unraid media share — adjust the left side to your share path
       - /mnt/user/media:/media
-      # Persistent data (SQLite DB)
       - libtag-data:/data
     environment:
       - LIBTAG_MEDIA_PATH=/media
@@ -29,14 +27,6 @@ services:
       - "11434:11434"
     volumes:
       - ollama-models:/root/.ollama
-    # Uncomment for NVIDIA GPU support on Unraid:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
 
 volumes:
   libtag-data:
