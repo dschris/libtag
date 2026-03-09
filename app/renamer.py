@@ -83,9 +83,12 @@ class Renamer:
             score += CODEC_SCORES.get(codec.lower(), 0)
         return score
 
-    async def _call_ollama_single(self, filename: str) -> dict:
+    async def _call_ollama_single(self, filename: str, folder_name: str | None = None) -> dict:
         """Send a single filename to Ollama and parse the response."""
-        prompt = f'{SYSTEM_PROMPT}\n\nAnalyze this filename and return a JSON object:\n"{filename}"'
+        context = f'\nFilename: "{filename}"'
+        if folder_name and folder_name != os.path.basename(settings.media_path):
+            context = f'\nFolder: "{folder_name}"\nFilename: "{filename}"\n\nUse BOTH the folder name and filename as context clues to determine the content.'
+        prompt = f'{SYSTEM_PROMPT}\n\nAnalyze this media file and return a JSON object:{context}'
 
         payload = {
             "model": self.model,
@@ -149,10 +152,13 @@ class Renamer:
 
                     file_id = f["id"]
                     current_name = f["current_name"]
-                    logger.info(f"Processing: {current_name}")
+                    logger.info(f"Processing: {current_name} (in {os.path.basename(os.path.dirname(f['path']))}/)")
+
+                    # Pass parent folder name for additional context
+                    folder_name = os.path.basename(os.path.dirname(f["path"]))
 
                     try:
-                        entry = await self._call_ollama_single(current_name)
+                        entry = await self._call_ollama_single(current_name, folder_name)
                     except Exception as e:
                         logger.error(f"Ollama call failed for {current_name}: {e}")
                         await self.db.update_file_status(file_id, "error", str(e))
@@ -213,10 +219,11 @@ class Renamer:
         return stats
 
     async def _execute_rename(self, file_record: dict, new_name: str) -> bool:
-        """Rename the file and flatten to media root. Clean up empty dirs."""
+        """Rename the file, flatten to media root, and stage leftover folders."""
         file_id = file_record["id"]
         old_path = file_record["path"]
         media_root = settings.media_path
+        old_dir = os.path.dirname(old_path)
 
         # Always place renamed files in the media root (flatten)
         new_path = os.path.join(media_root, new_name)
@@ -240,8 +247,9 @@ class Renamer:
                 await self.db.mark_file_renamed(file_id, new_path, new_name)
                 logger.info(f"  ✓ Renamed on disk: {new_name}")
 
-                # Clean up empty parent directories
-                self._cleanup_empty_dirs(os.path.dirname(old_path), media_root)
+                # If the file was in a subdirectory, move leftover folder to staging
+                if os.path.normpath(old_dir) != os.path.normpath(media_root):
+                    self._stage_leftover_folder(old_dir, media_root)
             else:
                 await self.db.update_file_status(file_id, "renamed")
             return True
@@ -251,17 +259,39 @@ class Renamer:
             return False
 
     @staticmethod
-    def _cleanup_empty_dirs(directory: str, stop_at: str):
-        """Remove empty directories up to (but not including) stop_at."""
-        stop_at = os.path.normpath(stop_at)
-        directory = os.path.normpath(directory)
-        while directory != stop_at and directory.startswith(stop_at):
-            try:
-                if os.path.isdir(directory) and not os.listdir(directory):
-                    os.rmdir(directory)
-                    logger.info(f"  Removed empty dir: {directory}")
-                    directory = os.path.dirname(directory)
-                else:
-                    break
-            except OSError:
-                break
+    def _stage_leftover_folder(folder: str, media_root: str):
+        """Move a leftover folder to the staging area for cleanup."""
+        staging_base = os.path.join(media_root, settings.duplicates_dir, "_leftovers")
+
+        # Find the top-level subfolder relative to media root
+        rel = os.path.relpath(folder, media_root)
+        top_folder = rel.split(os.sep)[0]
+        top_folder_path = os.path.join(media_root, top_folder)
+
+        if not os.path.isdir(top_folder_path):
+            return
+
+        try:
+            # Check if folder is now empty — just delete it
+            if not os.listdir(top_folder_path):
+                os.rmdir(top_folder_path)
+                logger.info(f"  Removed empty dir: {top_folder}")
+                return
+
+            # Move the whole folder to staging
+            staging_dest = os.path.join(staging_base, top_folder)
+            os.makedirs(staging_base, exist_ok=True)
+
+            # Handle existing name in staging
+            if os.path.exists(staging_dest):
+                counter = 1
+                while os.path.exists(f"{staging_dest} ({counter})"):
+                    counter += 1
+                staging_dest = f"{staging_dest} ({counter})"
+
+            import shutil
+            shutil.move(top_folder_path, staging_dest)
+            logger.info(f"  Staged leftover folder: {top_folder} -> {staging_dest}")
+        except OSError as e:
+            logger.warning(f"  Failed to stage folder {top_folder}: {e}")
+
