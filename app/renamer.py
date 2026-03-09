@@ -111,13 +111,11 @@ class Renamer:
         """Send a batch of filenames to Ollama and parse the response."""
         filename_list = "\n".join(f"- {name}" for name in filenames)
         user_prompt = USER_PROMPT_TEMPLATE.format(filenames=filename_list)
+        full_prompt = f"{SYSTEM_PROMPT}\n\n{user_prompt}"
 
         payload = {
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
+            "prompt": full_prompt,
             "stream": False,
             "options": {
                 "temperature": 0.1,
@@ -128,13 +126,13 @@ class Renamer:
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{self.ollama_url}/api/chat",
+                f"{self.ollama_url}/api/generate",
                 json=payload,
             )
             response.raise_for_status()
 
         result = response.json()
-        content = result.get("message", {}).get("content", "")
+        content = result.get("response", "")
 
         # Parse the JSON response
         try:
