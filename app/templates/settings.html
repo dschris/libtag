@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Settings</h2>
+    <p>Current configuration (set via environment variables)</p>
+</div>
+
+<div class="card">
+    <div class="settings-grid">
+        <div class="setting-item">
+            <span class="setting-label">Media Path</span>
+            <span class="setting-value">{{ settings.media_path }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Ollama URL</span>
+            <span class="setting-value">{{ settings.ollama_url }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Ollama Model</span>
+            <span class="setting-value">{{ settings.ollama_model }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Auto Mode</span>
+            <span class="setting-value">{{ 'Enabled' if settings.auto_mode else 'Disabled' }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Scan Extensions</span>
+            <span class="setting-value" style="font-size: 11px; max-width: 400px; word-break: break-all;">{{
+                settings.scan_extensions }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Rename Batch Size</span>
+            <span class="setting-value">{{ settings.rename_batch_size }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Scan Batch Size</span>
+            <span class="setting-value">{{ settings.scan_batch_size }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Hash Workers</span>
+            <span class="setting-value">{{ settings.workers }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Partial Hash</span>
+            <span class="setting-value">{{ 'Enabled' if settings.use_partial_hash else 'Disabled' }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Database Path</span>
+            <span class="setting-value">{{ settings.db_path }}</span>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Duplicates Dir</span>
+            <span class="setting-value">{{ settings.duplicates_dir }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

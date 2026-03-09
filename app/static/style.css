@@ -1,0 +1,639 @@
+/* ── LibTag Dashboard ─────────────────────────────────────────────── */
+
+:root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #1a1d27;
+    --bg-card: #22253a;
+    --bg-card-hover: #2a2e45;
+    --bg-input: #181b28;
+    --border: #2d3148;
+    --border-focus: #6366f1;
+    --text-primary: #e8eaed;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+    --success: #34d399;
+    --success-bg: rgba(52, 211, 153, 0.1);
+    --warning: #fbbf24;
+    --warning-bg: rgba(251, 191, 36, 0.1);
+    --danger: #f87171;
+    --danger-bg: rgba(248, 113, 113, 0.1);
+    --info: #60a5fa;
+    --info-bg: rgba(96, 165, 250, 0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --transition: 0.2s ease;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────── */
+
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+}
+
+.sidebar-brand .logo {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+}
+
+.sidebar-brand h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.sidebar-brand span {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sidebar-nav {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all var(--transition);
+}
+
+.sidebar-nav a:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.sidebar-nav a.active {
+    background: var(--accent-glow);
+    color: var(--accent);
+}
+
+.sidebar-nav a .icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.main-content {
+    margin-left: 260px;
+    flex: 1;
+    padding: 32px 40px;
+    max-width: 1400px;
+}
+
+.page-header {
+    margin-bottom: 32px;
+}
+
+.page-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+}
+
+.page-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────── */
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: all var(--transition);
+}
+
+.card:hover {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.card-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* ── Stats Grid ──────────────────────────────────────────────────── */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.stat-card .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: -1px;
+}
+
+.stat-card.accent .stat-value {
+    color: var(--accent);
+}
+
+.stat-card.success .stat-value {
+    color: var(--success);
+}
+
+.stat-card.warning .stat-value {
+    color: var(--warning);
+}
+
+.stat-card.danger .stat-value {
+    color: var(--danger);
+}
+
+.stat-card.info .stat-value {
+    color: var(--info);
+}
+
+/* ── Pipeline Controls ───────────────────────────────────────────── */
+
+.pipeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.pipeline-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pipeline-status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+}
+
+.pipeline-status.running .dot {
+    background: var(--success);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.pipeline-status.completed .dot {
+    background: var(--success);
+}
+
+.pipeline-status.error .dot {
+    background: var(--danger);
+}
+
+.pipeline-status.stopped .dot {
+    background: var(--warning);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-decoration: none;
+    font-family: var(--font-sans);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.btn-danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.btn-danger:hover {
+    background: rgba(248, 113, 113, 0.2);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-success {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.btn-success:hover {
+    background: rgba(52, 211, 153, 0.2);
+}
+
+/* ── Tables ──────────────────────────────────────────────────────── */
+
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.data-table thead th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+}
+
+.data-table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(45, 49, 72, 0.5);
+    vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+    background: var(--bg-card-hover);
+}
+
+.data-table .filename {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.data-table .filepath {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    word-break: break-all;
+}
+
+/* ── Status Badges ───────────────────────────────────────────────── */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-pending {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+.badge-scanned {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+.badge-hashing {
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.badge-hashed {
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.badge-renaming {
+    background: var(--accent-glow);
+    color: var(--accent);
+}
+
+.badge-renamed {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.badge-duplicate {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.badge-smart_duplicate {
+    background: rgba(168, 85, 247, 0.1);
+    color: #a855f7;
+}
+
+.badge-error {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+/* ── Duplicate Groups ────────────────────────────────────────────── */
+
+.dup-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.dup-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: rgba(248, 113, 113, 0.05);
+    border-bottom: 1px solid var(--border);
+}
+
+.dup-group-header .hash {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.dup-group-files {
+    padding: 0;
+}
+
+.dup-file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(45, 49, 72, 0.3);
+}
+
+.dup-file:last-child {
+    border-bottom: none;
+}
+
+.dup-file.keeper {
+    background: rgba(52, 211, 153, 0.05);
+}
+
+.dup-file .keeper-badge {
+    font-size: 10px;
+    color: var(--success);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* ── Settings ────────────────────────────────────────────────────── */
+
+.settings-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.setting-item .setting-label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.setting-item .setting-value {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    background: var(--bg-input);
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+/* ── Empty states ────────────────────────────────────────────────── */
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+/* ── Arrow indicator for renames ─────────────────────────────────── */
+
+.rename-arrow {
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0 8px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+        padding: 16px 8px;
+    }
+
+    .sidebar-brand h1,
+    .sidebar-brand span,
+    .sidebar-nav a span {
+        display: none;
+    }
+
+    .sidebar-nav a .icon {
+        font-size: 20px;
+    }
+
+    .main-content {
+        margin-left: 60px;
+        padding: 20px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* ── Pagination ──────────────────────────────────────────────────── */
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+}

@@ -1,0 +1,41 @@
+services:
+  libtag:
+    build: .
+    container_name: libtag
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount your Unraid media share — adjust the left side to your share path
+      - /mnt/user/media:/media
+      # Persistent data (SQLite DB)
+      - libtag-data:/data
+    environment:
+      - LIBTAG_MEDIA_PATH=/media
+      - LIBTAG_OLLAMA_URL=http://ollama:11434
+      - LIBTAG_OLLAMA_MODEL=llama3.1:8b
+      - LIBTAG_DB_PATH=/data/libtag.db
+      - LIBTAG_AUTO_MODE=true
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: libtag-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    # Uncomment for NVIDIA GPU support on Unraid:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  libtag-data:
+  ollama-models:

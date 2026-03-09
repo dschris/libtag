@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Duplicates{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Duplicates</h2>
+    <p>Files with identical or equivalent content. Lower-quality copies are moved to the staging folder.</p>
+</div>
+
+{% if smart_groups %}
+<h3 style="margin-bottom: 16px; font-size: 18px;">🧠 Smart Duplicates <span
+        style="color: var(--text-muted); font-size: 14px; font-weight: 400;">(same content, different quality)</span>
+</h3>
+
+{% for item in smart_groups %}
+<div class="dup-group" style="border-color: var(--accent);">
+    <div class="dup-group-header" style="background: var(--accent-glow);">
+        <div>
+            <strong>{{ item.group.content_title }}</strong>
+            <span class="badge badge-renaming" style="margin-left: 8px;">{{ item.group.media_type or 'unknown' }}</span>
+            <span style="color: var(--text-muted); margin-left: 8px;">{{ item.group.file_count }} copies</span>
+        </div>
+        <span style="color: var(--success); font-weight: 600;">{{ format_bytes(item.group.space_saved) }} saved</span>
+    </div>
+    <div class="dup-group-files">
+        {% for f in item.files %}
+        <div class="dup-file {% if f.id == item.group.keeper_file_id %}keeper{% endif %}">
+            <div style="flex: 1;">
+                <div class="filename">{{ f.current_name }}</div>
+                <div class="filepath">{{ f.path }}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                {% if f.resolution %}
+                <span class="badge badge-hashed">{{ f.resolution }}</span>
+                {% endif %}
+                {% if f.source %}
+                <span class="badge badge-scanned">{{ f.source }}</span>
+                {% endif %}
+                {% if f.codec %}
+                <span class="badge badge-pending">{{ f.codec }}</span>
+                {% endif %}
+                <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">
+                    score: {{ f.quality_score or 0 }}
+                </span>
+                {% if f.id == item.group.keeper_file_id %}
+                <span class="keeper-badge">✓ Best Quality</span>
+                {% else %}
+                <span class="badge badge-duplicate">Lower Quality</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if groups %}
+<h3 style="margin: 32px 0 16px; font-size: 18px;">🔁 Exact Duplicates <span
+        style="color: var(--text-muted); font-size: 14px; font-weight: 400;">(identical files)</span></h3>
+
+{% for item in groups %}
+<div class="dup-group">
+    <div class="dup-group-header">
+        <div>
+            <strong>{{ item.group.file_count }} files</strong>
+            <span style="color: var(--text-muted); margin-left: 8px;">{{ format_bytes(item.group.total_size) }}</span>
+        </div>
+        <span class="hash">{{ item.group.hash[:16] }}…</span>
+    </div>
+    <div class="dup-group-files">
+        {% for f in item.files %}
+        <div class="dup-file {% if f.id == item.group.keeper_file_id %}keeper{% endif %}">
+            <div>
+                <div class="filename">{{ f.current_name }}</div>
+                <div class="filepath">{{ f.path }}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                {% if f.id == item.group.keeper_file_id %}
+                <span class="keeper-badge">✓ Keeper</span>
+                {% else %}
+                <span class="badge badge-duplicate">Duplicate</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if not groups and not smart_groups %}
+<div class="card">
+    <div class="empty-state">
+        <div class="icon">🔁</div>
+        <h3>No duplicates found</h3>
+        <p>Run the pipeline to scan and detect duplicate files.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

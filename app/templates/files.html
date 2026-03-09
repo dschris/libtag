@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Files{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Files</h2>
+    <p>Browse all discovered media files</p>
+</div>
+
+<div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;">
+    <a href="/files" class="btn {% if not status_filter %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">All ({{
+        stats.total }})</a>
+    <a href="/files?status=scanned"
+        class="btn {% if status_filter == 'scanned' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Scanned ({{
+        stats.scanned }})</a>
+    <a href="/files?status=hashed"
+        class="btn {% if status_filter == 'hashed' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Hashed ({{
+        stats.hashed }})</a>
+    <a href="/files?status=renamed"
+        class="btn {% if status_filter == 'renamed' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Renamed ({{
+        stats.renamed }})</a>
+    <a href="/files?status=duplicate"
+        class="btn {% if status_filter == 'duplicate' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Exact Dup ({{
+        stats.duplicate }})</a>
+    <a href="/files?status=smart_duplicate"
+        class="btn {% if status_filter == 'smart_duplicate' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Smart
+        Dup ({{ stats.smart_duplicate }})</a>
+    <a href="/files?status=error"
+        class="btn {% if status_filter == 'error' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Errors ({{
+        stats.error }})</a>
+</div>
+
+<div class="card">
+    {% if files %}
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Current Name</th>
+                    <th>Original Name</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                    <th>Directory</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in files %}
+                <tr>
+                    <td><span class="filename">{{ f.current_name }}</span></td>
+                    <td>
+                        {% if f.current_name != f.original_name %}
+                        <span class="filename" style="color: var(--text-muted); text-decoration: line-through;">{{
+                            f.original_name }}</span>
+                        {% else %}
+                        <span style="color: var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; color: var(--text-secondary);">{{ format_bytes(f.size) if
+                        format_bytes else f.size }}</td>
+                    <td><span class="badge badge-{{ f.status }}">{{ f.status }}</span></td>
+                    <td><span class="filepath">{{ f.directory }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/files?page={{ page - 1 }}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+            class="btn btn-ghost btn-sm">← Previous</a>
+        {% endif %}
+        <span style="color: var(--text-muted); font-size: 13px;">Page {{ page }}</span>
+        {% if files | length == 100 %}
+        <a href="/files?page={{ page + 1 }}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+            class="btn btn-ghost btn-sm">Next →</a>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📁</div>
+        <h3>No files found</h3>
+        <p>{% if status_filter %}No files with status "{{ status_filter }}".{% else %}Start the pipeline to discover
+            files.{% endif %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

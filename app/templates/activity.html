@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Activity Log{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Activity Log</h2>
+    <p>History of all file renames with undo capability</p>
+</div>
+
+<div class="card">
+    {% if history %}
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Original Name</th>
+                    <th></th>
+                    <th>New Name</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                <tr{% if entry.undone %} style="opacity: 0.4;" {% endif %}>
+                    <td>{{ entry.id }}</td>
+                    <td><span class="filename">{{ entry.old_name }}</span></td>
+                    <td><span class="rename-arrow">→</span></td>
+                    <td><span class="filename">{{ entry.new_name }}</span></td>
+                    <td><span style="color: var(--text-muted); font-size: 12px;">{{ entry.created_at }}</span></td>
+                    <td>
+                        {% if not entry.undone %}
+                        <form method="POST" action="/api/undo/{{ entry.id }}" style="display:inline">
+                            <button type="submit" class="btn btn-ghost btn-sm">↩ Undo</button>
+                        </form>
+                        {% else %}
+                        <span class="badge badge-hashed">Undone</span>
+                        {% endif %}
+                    </td>
+                    </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📝</div>
+        <h3>No activity yet</h3>
+        <p>Renames will appear here once the pipeline processes files.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

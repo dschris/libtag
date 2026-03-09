@@ -1,0 +1,30 @@
+<div class="stats-grid">
+    <div class="stat-card accent">
+        <span class="stat-label">Total Files</span>
+        <span class="stat-value">{{ stats.total }}</span>
+    </div>
+    <div class="stat-card info">
+        <span class="stat-label">Scanned</span>
+        <span class="stat-value">{{ stats.scanned + stats.hashed + stats.renamed }}</span>
+    </div>
+    <div class="stat-card success">
+        <span class="stat-label">Renamed</span>
+        <span class="stat-value">{{ stats.renames_completed }}</span>
+    </div>
+    <div class="stat-card warning">
+        <span class="stat-label">Exact Duplicates</span>
+        <span class="stat-value">{{ stats.duplicate }}</span>
+    </div>
+    <div class="stat-card danger">
+        <span class="stat-label">Smart Duplicates</span>
+        <span class="stat-value">{{ stats.smart_duplicate }}</span>
+    </div>
+    <div class="stat-card danger">
+        <span class="stat-label">Errors</span>
+        <span class="stat-value">{{ stats.error }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Space Recoverable</span>
+        <span class="stat-value" style="font-size: 22px;">{{ format_bytes(stats.duplicate_size_bytes) }}</span>
+    </div>
+</div>

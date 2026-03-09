@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Dashboard</h2>
+    <p>Monitor your media library processing pipeline</p>
+</div>
+
+<div class="pipeline-controls">
+    <form method="POST" action="/api/pipeline/start" style="display:inline">
+        <button type="submit" class="btn btn-primary">▶ Start Pipeline</button>
+    </form>
+    <form method="POST" action="/api/pipeline/stop" style="display:inline">
+        <button type="submit" class="btn btn-danger">⏹ Stop</button>
+    </form>
+    <div class="pipeline-status {{ pipeline_status.split(':')[0] }}">
+        <span class="dot"></span>
+        <span>{{ pipeline_status | upper }}</span>
+    </div>
+</div>
+
+<div id="stats-area" hx-get="/partials/stats" hx-trigger="every 3s" hx-swap="innerHTML">
+    {% include "partials/stats.html" %}
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px;">
+    <div class="card">
+        <div class="card-header">
+            <h3>Individual Steps</h3>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <form method="POST" action="/api/scan/start">
+                <button type="submit" class="btn btn-ghost" style="width: 100%;">🔍 Scan Files</button>
+            </form>
+            <form method="POST" action="/api/hash/start">
+                <button type="submit" class="btn btn-ghost" style="width: 100%;">🔐 Hash Files</button>
+            </form>
+            <form method="POST" action="/api/dedup/start">
+                <button type="submit" class="btn btn-ghost" style="width: 100%;">🗑 Find Duplicates</button>
+            </form>
+            <form method="POST" action="/api/rename/start">
+                <button type="submit" class="btn btn-ghost" style="width: 100%;">✏️ Rename Files</button>
+            </form>
+            <form method="POST" action="/api/smart-dedup/start">
+                <button type="submit" class="btn btn-ghost" style="width: 100%;">🧠 Smart Dedup</button>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3>Quick Info</h3>
+        </div>
+        <div class="settings-grid">
+            <div class="setting-item">
+                <span class="setting-label">Media Path</span>
+                <span class="setting-value">{{ settings.media_path if settings else '/media' }}</span>
+            </div>
+            <div class="setting-item">
+                <span class="setting-label">Ollama Model</span>
+                <span class="setting-value">{{ settings.ollama_model if settings else 'llama3.1:8b' }}</span>
+            </div>
+            <div class="setting-item">
+                <span class="setting-label">Auto Mode</span>
+                <span class="setting-value">{{ 'Enabled' if (settings and settings.auto_mode) else 'Disabled' }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
