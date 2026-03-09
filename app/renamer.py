@@ -213,11 +213,13 @@ class Renamer:
         return stats
 
     async def _execute_rename(self, file_record: dict, new_name: str) -> bool:
-        """Actually rename the file on disk."""
+        """Rename the file and flatten to media root. Clean up empty dirs."""
         file_id = file_record["id"]
         old_path = file_record["path"]
-        directory = os.path.dirname(old_path)
-        new_path = os.path.join(directory, new_name)
+        media_root = settings.media_path
+
+        # Always place renamed files in the media root (flatten)
+        new_path = os.path.join(media_root, new_name)
 
         # Avoid overwriting existing files
         if os.path.exists(new_path) and old_path != new_path:
@@ -225,7 +227,7 @@ class Renamer:
             counter = 1
             while os.path.exists(new_path):
                 new_name = f"{base} ({counter}){ext}"
-                new_path = os.path.join(directory, new_name)
+                new_path = os.path.join(media_root, new_name)
                 counter += 1
 
         try:
@@ -237,6 +239,9 @@ class Renamer:
                 )
                 await self.db.mark_file_renamed(file_id, new_path, new_name)
                 logger.info(f"  ✓ Renamed on disk: {new_name}")
+
+                # Clean up empty parent directories
+                self._cleanup_empty_dirs(os.path.dirname(old_path), media_root)
             else:
                 await self.db.update_file_status(file_id, "renamed")
             return True
@@ -244,3 +249,19 @@ class Renamer:
             logger.error(f"Failed to rename {old_path}: {e}")
             await self.db.update_file_status(file_id, "error", str(e))
             return False
+
+    @staticmethod
+    def _cleanup_empty_dirs(directory: str, stop_at: str):
+        """Remove empty directories up to (but not including) stop_at."""
+        stop_at = os.path.normpath(stop_at)
+        directory = os.path.normpath(directory)
+        while directory != stop_at and directory.startswith(stop_at):
+            try:
+                if os.path.isdir(directory) and not os.listdir(directory):
+                    os.rmdir(directory)
+                    logger.info(f"  Removed empty dir: {directory}")
+                    directory = os.path.dirname(directory)
+                else:
+                    break
+            except OSError:
+                break
