@@ -40,4 +40,6 @@ services:
 
 volumes:
   libtag-data:
+    driver: local
   ollama-models:
+    driver: local
