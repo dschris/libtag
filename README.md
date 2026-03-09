@@ -19,7 +19,7 @@ cp .env.example .env
 
 # 2. Edit docker-compose.yml to set your media share path
 # 3. Start
-docker compose up -d
+docker-compose up -d
 
 # 4. Pull the LLM model
 docker exec libtag-ollama ollama pull llama3.1:8b

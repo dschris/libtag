@@ -75,7 +75,7 @@ deploy:
 ### 5. Start the Stack
 
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
 ### 6. Pull the Ollama Model
@@ -235,7 +235,7 @@ All variables use the `LIBTAG_` prefix.
 ### Database locked
 
 - Only run one pipeline at a time
-- If stuck, stop the container and restart: `docker compose restart libtag`
+- If stuck, stop the container and restart: `docker-compose restart libtag`
 
 ### Undo a rename
 
