@@ -8,8 +8,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - /mnt/user/media:/media
-      - libtag-data:/data
+      - /mnt/user/movies/test:/media
+      - /mnt/user/appdata/libtag/data:/data
     environment:
       - LIBTAG_MEDIA_PATH=/media
       - LIBTAG_OLLAMA_URL=http://ollama:11434
@@ -26,10 +26,4 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollama-models:/root/.ollama
-
-volumes:
-  libtag-data:
-    driver: local
-  ollama-models:
-    driver: local
+      - /mnt/user/appdata/libtag/ollama:/root/.ollama
