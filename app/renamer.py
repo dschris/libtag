@@ -33,52 +33,28 @@ CODEC_SCORES = {
     "xvid": 5, "divx": 5,
 }
 
-SYSTEM_PROMPT = """You are a media file naming expert. Your job is to analyze media filenames and do two things:
+SYSTEM_PROMPT = """You are a media file naming expert. Given a single media filename, you must:
 1. Suggest a clean, descriptive new filename
 2. Extract structured metadata about the content
 
-Guidelines for naming:
-- Determine the media type (movie, TV show, music, documentary, etc.) from context clues
-- Extract meaningful information: title, year, season/episode, resolution, codec, source, etc.
-- Choose a clear, consistent naming style appropriate to the media type
-- Remove junk characters, release group tags, and unnecessary information
+Return a JSON object with these fields:
+- "suggested": the clean new filename (keep the same file extension)
+- "content_title": normalized content identity (e.g. "Inception (2010)", "Breaking Bad S01E01")
+- "media_type": one of "movie", "tv", "music", "other"
+- "resolution": e.g. "2160p", "1080p", "720p", "480p", or null
+- "codec": e.g. "x265", "x264", "AV1", or null
+- "source": e.g. "BluRay", "WEB-DL", "HDTV", "DVDRip", or null
+
+Rules:
+- Remove junk: release group tags, scene tags, unnecessary dots/brackets
 - Keep the file extension unchanged
-- If the original name is already clean and descriptive, keep it as-is
-- If you cannot confidently determine what the file is, return the original name unchanged
+- If the name is already clean, return it unchanged as "suggested"
+- content_title must be NORMALIZED: same content at different qualities must have the EXACT same content_title
+- Include the year in content_title for movies, e.g. "Inception (2010)"
+- Include season/episode for TV, e.g. "Breaking Bad S01E01"
 
-Guidelines for metadata extraction:
-- content_title: The core identity of the content (e.g. "Inception", "Breaking Bad S01E01", "Artist - Song Title"). This should be the SAME for different copies of the same content at different qualities.
-- media_type: one of "movie", "tv", "music", "other"
-- resolution: e.g. "2160p", "1080p", "720p", "480p", "SD", or null
-- codec: e.g. "x265", "x264", "AV1", or null
-- source: e.g. "BluRay", "WEB-DL", "HDTV", "DVDRip", or null
-
-CRITICAL: The content_title must be NORMALIZED so that two copies of the same content will have EXACTLY the same content_title regardless of quality or source. For example:
-- "Inception.2010.1080p.BluRay.x264.mkv" → content_title: "Inception (2010)"
-- "Inception.2010.720p.WEB-DL.x265.mkv" → content_title: "Inception (2010)"
-- "Breaking.Bad.S01E01.720p.mkv" → content_title: "Breaking Bad S01E01"
-- "breaking bad - s01e01 - pilot.1080p.mkv" → content_title: "Breaking Bad S01E01"
-
-You must respond with valid JSON only. No explanation, no markdown, just a JSON array."""
-
-USER_PROMPT_TEMPLATE = """Analyze these filenames. For each, suggest a better name AND extract metadata. Return a JSON array.
-
-Filenames:
-{filenames}
-
-Respond with ONLY a JSON array like:
-[
-  {{
-    "original": "old.name.mkv",
-    "suggested": "New Name.mkv",
-    "content_title": "Normalized Title (Year)",
-    "media_type": "movie",
-    "resolution": "1080p",
-    "codec": "x264",
-    "source": "BluRay"
-  }},
-  ...
-]"""
+Example input: "Inception.2010.1080p.BluRay.x264-GROUP.mkv"
+Example output: {"suggested": "Inception (2010) 1080p BluRay.mkv", "content_title": "Inception (2010)", "media_type": "movie", "resolution": "1080p", "codec": "x264", "source": "BluRay"}"""
 
 
 class Renamer:
@@ -107,24 +83,22 @@ class Renamer:
             score += CODEC_SCORES.get(codec.lower(), 0)
         return score
 
-    async def _call_ollama(self, filenames: list[str]) -> list[dict]:
-        """Send a batch of filenames to Ollama and parse the response."""
-        filename_list = "\n".join(f"- {name}" for name in filenames)
-        user_prompt = USER_PROMPT_TEMPLATE.format(filenames=filename_list)
-        full_prompt = f"{SYSTEM_PROMPT}\n\n{user_prompt}"
+    async def _call_ollama_single(self, filename: str) -> dict:
+        """Send a single filename to Ollama and parse the response."""
+        prompt = f'{SYSTEM_PROMPT}\n\nAnalyze this filename and return a JSON object:\n"{filename}"'
 
         payload = {
             "model": self.model,
-            "prompt": full_prompt,
+            "prompt": prompt,
             "stream": False,
             "options": {
                 "temperature": 0.1,
-                "num_predict": 4096,
+                "num_predict": 1024,
             },
             "format": "json",
         }
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 f"{self.ollama_url}/api/generate",
                 json=payload,
@@ -133,52 +107,18 @@ class Renamer:
 
         result = response.json()
         content = result.get("response", "")
-        logger.info(f"Ollama raw response length: {len(content)} chars")
-        logger.info(f"Ollama raw response: {content}")
+        logger.info(f"Ollama response for '{filename}': {content}")
 
-        # Parse the JSON response — handle many possible formats
         try:
             parsed = json.loads(content)
-
-            # If it's already a list, great
-            if isinstance(parsed, list):
-                return parsed
-
             if isinstance(parsed, dict):
-                # Case 1: {"results": [...]} or {"suggestions": [...]}
-                for v in parsed.values():
-                    if isinstance(v, list):
-                        return v
-
-                # Case 2: Single suggestion object like {"original": "x", "suggested": "y"}
-                if "original" in parsed or "suggested" in parsed:
-                    return [parsed]
-
-                # Case 3: Dict keyed by filename {"old.mkv": {"suggested": "new.mkv"}}
-                items = []
-                for k, v in parsed.items():
-                    if isinstance(v, dict):
-                        v["original"] = v.get("original", k)
-                        items.append(v)
-                    elif isinstance(v, str):
-                        items.append({"original": k, "suggested": v})
-                if items:
-                    return items
-
-                logger.warning(f"Could not extract suggestions from dict response")
-                return []
-
-            logger.warning(f"Unexpected response type: {type(parsed)}")
-            return []
+                return parsed
+            if isinstance(parsed, list) and len(parsed) > 0:
+                return parsed[0] if isinstance(parsed[0], dict) else {}
+            return {}
         except json.JSONDecodeError:
-            match = re.search(r'\[.*\]', content, re.DOTALL)
-            if match:
-                try:
-                    return json.loads(match.group())
-                except json.JSONDecodeError:
-                    pass
-            logger.warning(f"Failed to parse LLM response as JSON")
-            return []
+            logger.warning(f"Failed to parse LLM response as JSON: {content[:200]}")
+            return {}
 
     def _sanitize_filename(self, name: str) -> str:
         """Remove characters that are illegal in common filesystems."""
@@ -190,7 +130,7 @@ class Renamer:
         return name
 
     async def rename_pending_files(self) -> dict:
-        """Process hashed files through the LLM — rename and extract metadata."""
+        """Process hashed files through the LLM one at a time."""
         self._running = True
         stats = {"renamed": 0, "skipped": 0, "errors": 0, "metadata_extracted": 0}
 
@@ -203,53 +143,23 @@ class Renamer:
                 if not files:
                     break
 
-                filenames = [f["current_name"] for f in files]
-
-                try:
-                    logger.info(f"Calling Ollama with {len(filenames)} files: {filenames}")
-                    suggestions = await self._call_ollama(filenames)
-                    logger.info(f"Ollama returned {len(suggestions)} suggestions")
-                    for s in suggestions:
-                        logger.info(f"  Suggestion: {s.get('original', '?')} -> {s.get('suggested', '?')}")
-                except Exception as e:
-                    logger.error(f"Ollama call failed: {e}")
-                    stats["errors"] += len(files)
-                    for f in files:
-                        await self.db.update_file_status(f["id"], "hashed")
-                    break
-
-                # Map suggestions back to files using multiple strategies
-                # Strategy 1: exact match on "original" field
-                suggestion_map = {}
-                for s in suggestions:
-                    orig = s.get("original", "")
-                    if orig:
-                        suggestion_map[orig] = s
-
-                # Strategy 2: case-insensitive match
-                suggestion_map_lower = {k.lower(): v for k, v in suggestion_map.items()}
-
-                # Strategy 3: index-based (positional) — fallback
-                suggestion_list = suggestions if isinstance(suggestions, list) else []
-
-                for idx, f in enumerate(files):
+                for f in files:
                     if not self._running:
                         break
 
                     file_id = f["id"]
                     current_name = f["current_name"]
+                    logger.info(f"Processing: {current_name}")
 
-                    # Try exact match, then case-insensitive, then index
-                    entry = suggestion_map.get(current_name)
-                    if not entry:
-                        entry = suggestion_map_lower.get(current_name.lower())
-                    if not entry and idx < len(suggestion_list):
-                        entry = suggestion_list[idx]
-                        logger.info(f"Using index-based match for {current_name}: {entry.get('suggested', '?')}")
-                    if not entry:
-                        entry = {}
+                    try:
+                        entry = await self._call_ollama_single(current_name)
+                    except Exception as e:
+                        logger.error(f"Ollama call failed for {current_name}: {e}")
+                        await self.db.update_file_status(file_id, "error", str(e))
+                        stats["errors"] += 1
+                        continue
 
-                    # Extract and store metadata regardless of rename
+                    # Extract and store metadata
                     content_title = entry.get("content_title", "")
                     media_type = entry.get("media_type", "other")
                     resolution = entry.get("resolution")
@@ -263,12 +173,14 @@ class Renamer:
                             resolution, quality_score, codec, source
                         )
                         stats["metadata_extracted"] += 1
+                        logger.info(f"  Metadata: title='{content_title}' type={media_type} "
+                                    f"res={resolution} codec={codec} source={source} score={quality_score}")
 
                     # Handle rename
                     suggested = entry.get("suggested", "")
 
                     if not suggested or suggested == current_name:
-                        logger.info(f"Skipping {current_name} (no rename suggested)")
+                        logger.info(f"  No rename needed for {current_name}")
                         await self.db.update_file_status(file_id, "renamed")
                         stats["skipped"] += 1
                         continue
@@ -279,6 +191,7 @@ class Renamer:
                         stats["skipped"] += 1
                         continue
 
+                    logger.info(f"  Renaming: {current_name} -> {suggested}")
                     await self.db.update_file_proposed_name(file_id, suggested)
 
                     if settings.auto_mode:
@@ -323,7 +236,7 @@ class Renamer:
                     file_record["current_name"], new_name
                 )
                 await self.db.mark_file_renamed(file_id, new_path, new_name)
-                logger.info(f"Renamed: {file_record['current_name']} -> {new_name}")
+                logger.info(f"  ✓ Renamed on disk: {new_name}")
             else:
                 await self.db.update_file_status(file_id, "renamed")
             return True
