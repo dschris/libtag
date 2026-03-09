@@ -134,21 +134,42 @@ class Renamer:
         result = response.json()
         content = result.get("response", "")
         logger.info(f"Ollama raw response length: {len(content)} chars")
-        logger.debug(f"Ollama raw response: {content[:500]}")
+        logger.info(f"Ollama raw response: {content}")
 
-        # Parse the JSON response
+        # Parse the JSON response — handle many possible formats
         try:
             parsed = json.loads(content)
-            # Handle case where model wraps array in an object
+
+            # If it's already a list, great
+            if isinstance(parsed, list):
+                return parsed
+
             if isinstance(parsed, dict):
+                # Case 1: {"results": [...]} or {"suggestions": [...]}
                 for v in parsed.values():
                     if isinstance(v, list):
-                        parsed = v
-                        break
-            if not isinstance(parsed, list):
-                logger.warning(f"Unexpected response format: {content[:200]}")
+                        return v
+
+                # Case 2: Single suggestion object like {"original": "x", "suggested": "y"}
+                if "original" in parsed or "suggested" in parsed:
+                    return [parsed]
+
+                # Case 3: Dict keyed by filename {"old.mkv": {"suggested": "new.mkv"}}
+                items = []
+                for k, v in parsed.items():
+                    if isinstance(v, dict):
+                        v["original"] = v.get("original", k)
+                        items.append(v)
+                    elif isinstance(v, str):
+                        items.append({"original": k, "suggested": v})
+                if items:
+                    return items
+
+                logger.warning(f"Could not extract suggestions from dict response")
                 return []
-            return parsed
+
+            logger.warning(f"Unexpected response type: {type(parsed)}")
+            return []
         except json.JSONDecodeError:
             match = re.search(r'\[.*\]', content, re.DOTALL)
             if match:
@@ -156,7 +177,7 @@ class Renamer:
                     return json.loads(match.group())
                 except json.JSONDecodeError:
                     pass
-            logger.warning(f"Failed to parse LLM response: {content[:200]}")
+            logger.warning(f"Failed to parse LLM response as JSON")
             return []
 
     def _sanitize_filename(self, name: str) -> str:
@@ -197,20 +218,36 @@ class Renamer:
                         await self.db.update_file_status(f["id"], "hashed")
                     break
 
-                # Map suggestions back to files
+                # Map suggestions back to files using multiple strategies
+                # Strategy 1: exact match on "original" field
                 suggestion_map = {}
                 for s in suggestions:
                     orig = s.get("original", "")
                     if orig:
                         suggestion_map[orig] = s
 
-                for f in files:
+                # Strategy 2: case-insensitive match
+                suggestion_map_lower = {k.lower(): v for k, v in suggestion_map.items()}
+
+                # Strategy 3: index-based (positional) — fallback
+                suggestion_list = suggestions if isinstance(suggestions, list) else []
+
+                for idx, f in enumerate(files):
                     if not self._running:
                         break
 
                     file_id = f["id"]
                     current_name = f["current_name"]
-                    entry = suggestion_map.get(current_name, {})
+
+                    # Try exact match, then case-insensitive, then index
+                    entry = suggestion_map.get(current_name)
+                    if not entry:
+                        entry = suggestion_map_lower.get(current_name.lower())
+                    if not entry and idx < len(suggestion_list):
+                        entry = suggestion_list[idx]
+                        logger.info(f"Using index-based match for {current_name}: {entry.get('suggested', '?')}")
+                    if not entry:
+                        entry = {}
 
                     # Extract and store metadata regardless of rename
                     content_title = entry.get("content_title", "")
