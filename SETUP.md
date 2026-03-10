@@ -212,6 +212,64 @@ All variables use the `LIBTAG_` prefix.
 
 ---
 
+## Development Workflow
+
+Standard cycle for testing feature changes on the server.
+
+### 1. Commit & Push (Local Machine)
+
+```bash
+cd /path/to/libtag
+git add -A
+git commit -m "Describe your change"
+git push origin main
+```
+
+### 2. Pull & Rebuild (Unraid Server)
+
+```bash
+ssh root@your-unraid-ip
+cd /mnt/user/appdata/libtag
+
+# Pull latest code
+git pull origin main
+
+# Rebuild and restart
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+### 3. Clear Database (Optional)
+
+If your change affects scanning, renaming, or dedup logic and you need files re-processed from scratch:
+
+```bash
+# Remove the SQLite database — the app will recreate it on startup
+rm -f /mnt/user/appdata/libtag/data/libtag.db
+
+# Restart so it picks up the empty DB
+docker-compose restart libtag
+```
+
+### 4. Verify
+
+```bash
+# Tail logs to watch the pipeline
+docker logs -f libtag
+
+# Or check the dashboard
+# http://your-unraid-ip:8080
+```
+
+### Quick One-Liner (Pull + Rebuild + Fresh DB + Restart)
+
+```bash
+cd /mnt/user/appdata/libtag && git pull origin main && docker-compose down && rm -f /mnt/user/appdata/libtag/data/libtag.db && docker-compose build --no-cache && docker-compose up -d && docker logs -f libtag
+```
+
+---
+
 ## Troubleshooting
 
 ### "Connection refused" to Ollama

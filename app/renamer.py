@@ -132,6 +132,19 @@ class Renamer:
         name = name.strip('. ')
         return name
 
+    def _clean_filename(self, name: str) -> str:
+        """Deterministic cleanup: title case, remove dashes, clean separators."""
+        base, ext = os.path.splitext(name)
+        # Replace common separators (dashes, underscores, dots) with spaces
+        clean = re.sub(r'[-_.]+', ' ', base)
+        # Remove bracketed junk like [GROUP] or {xxx}
+        clean = re.sub(r'[\[\{][^\]\}]*[\]\}]', '', clean)
+        # Collapse whitespace
+        clean = re.sub(r'\s+', ' ', clean).strip()
+        # Title case
+        clean = clean.title()
+        return f"{clean}{ext}"
+
     async def rename_pending_files(self) -> dict:
         """Process hashed files through the LLM one at a time."""
         self._running = True
@@ -182,17 +195,21 @@ class Renamer:
                         logger.info(f"  Metadata: title='{content_title}' type={media_type} "
                                     f"res={resolution} codec={codec} source={source} score={quality_score}")
 
-                    # Handle rename
+                    # Handle rename — renaming is mandatory
                     suggested = entry.get("suggested", "")
 
+                    # If LLM didn't suggest anything useful, apply deterministic cleanup
                     if not suggested or suggested == current_name:
-                        logger.info(f"  No rename needed for {current_name}")
-                        await self.db.update_file_status(file_id, "renamed")
-                        stats["skipped"] += 1
-                        continue
+                        suggested = self._clean_filename(current_name)
+                    else:
+                        # Even LLM suggestions get post-processed for consistent formatting
+                        suggested = self._clean_filename(suggested)
 
                     suggested = self._sanitize_filename(suggested)
-                    if not suggested:
+
+                    # After all cleanup, if the name is truly unchanged, just mark renamed
+                    if not suggested or suggested == current_name:
+                        logger.info(f"  Already clean: {current_name}")
                         await self.db.update_file_status(file_id, "renamed")
                         stats["skipped"] += 1
                         continue
